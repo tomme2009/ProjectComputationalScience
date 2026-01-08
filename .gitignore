@@ -1,3 +1,10 @@
 cses5_codebook/
 cses5_csv/
 read.py
+
+/target/
+**/*.rs.bk
+.idea/
+.vscode/
+*.swp
+*.swo
