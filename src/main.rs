@@ -1,4 +1,5 @@
 use election_simulator::agent::Agent;
+use election_simulator::network::WattsStrogatz;
 use election_simulator::party::Party;
 use election_simulator::probability::{Preferences, Probability};
 
@@ -59,6 +60,7 @@ fn initialize_parties(num_parties: usize, num_preferences: usize) -> Vec<Party> 
     for i in 0..num_parties {
         // Name is just the party's index
         let name = String::from(char::from_digit(i as u32, 10).unwrap());
+
         // Randomly initialize this party's preferences
         let values: Vec<f64> = (0..num_preferences)
             .map(|_| rand::random_range(0.0..=1.0))
@@ -69,12 +71,38 @@ fn initialize_parties(num_parties: usize, num_preferences: usize) -> Vec<Party> 
     parties
 }
 
-fn main() {
-    const NUM_PREFERENCES: usize = 10;
-    let agents = initialize_agents(100, NUM_PREFERENCES);
-    let parties = initialize_parties(5, NUM_PREFERENCES);
+fn initialize_parties_with_names(
+    num_parties: usize,
+    num_preferences: usize,
+    names: &[&str],
+) -> Vec<Party> {
+    let mut parties = Vec::new();
 
-    let election_result = hold_election(&agents, &parties, VotingSystem::FPTP);
+    assert_eq!(num_parties, names.len());
+
+    for i in 0..num_parties {
+        // Randomly initialize this party's preferences
+        let values: Vec<f64> = (0..num_preferences)
+            .map(|_| rand::random_range(0.0..=1.0))
+            .collect();
+        parties.push(Party::new(
+            String::from(names[i]),
+            Preferences::new(&values),
+        ));
+    }
+
+    parties
+}
+
+fn main() {
+    const NUM_PREFERENCES: usize = 1;
+    let network = WattsStrogatz::new(1000, 24, 0.7, NUM_PREFERENCES).unwrap();
+    let agents = network.get_agents();
+    // let agents = initialize_agents(1000, NUM_PREFERENCES);
+    // let parties = initialize_parties(2, NUM_PREFERENCES);
+    let parties = initialize_parties_with_names(2, NUM_PREFERENCES, &["Left", "Right"]);
+
+    let election_result = hold_election(agents, &parties, VotingSystem::FPTP);
     match election_result {
         ElectionResult::FPTP(winner, votes) => {
             println!("The winner is {}", parties[winner].get_name());

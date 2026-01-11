@@ -1,12 +1,13 @@
 use crate::party::Party;
 use crate::probability::{Preferences, Probability};
+use std::collections::HashMap;
 
 /*
  * Data type representing relationships between agents
  */
 #[derive(Debug)]
 struct Relationship {
-    agent: usize,          // Index of the agent on the other side of the relationship
+    // agent: usize,          // Index of the agent on the other side of the relationship
     strength: Probability, // Strength of the relationship
 }
 
@@ -15,8 +16,8 @@ struct Relationship {
  */
 #[derive(Debug)]
 pub struct Agent {
-    friends: Vec<Relationship>, // List of agents this agent has a relationship with
-    preferences: Preferences,   // List of standpoints of the agent
+    friends: HashMap<usize, Relationship>, // List of agents this agent has a two-way relationship with
+    preferences: Preferences,              // List of standpoints of the agent
 }
 
 impl Agent {
@@ -24,9 +25,13 @@ impl Agent {
         // Convert the raw friends data in Relationships
         let friends = friends
             .iter()
-            .map(|(agent, strength)| Relationship {
-                agent: *agent,
-                strength: Probability::new(*strength),
+            .map(|(agent, strength)| {
+                (
+                    *agent,
+                    Relationship {
+                        strength: Probability::new(*strength),
+                    },
+                )
             })
             .collect();
 
