@@ -7,7 +7,7 @@ use std::fmt::Formatter;
  * Custom probability type
  * Functions as a float which can only hold values x: 0.0 <= x <= 1.0
  */
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct Probability {
     value: f64,
 }
@@ -90,7 +90,10 @@ impl Preferences {
      * see the Probability struct for the relevant conversion rules
      * This function will snap all negative floats, NaN, and infinite to 0.0
      */
-    pub fn new_normalize(preferences: &[f64]) -> Result<Preferences, String> {
+    pub fn new_normalize<T>(preferences: &[T]) -> Result<Preferences, String>
+    where
+        T: Copy + Into<f64>,
+    {
         if preferences.len() == 0 {
             return Ok(Preferences {
                 preferences: Vec::new(),
@@ -101,10 +104,11 @@ impl Preferences {
         let preferences: Vec<f64> = preferences
             .iter()
             .map(|value| {
-                if *value < 0.0 || value.is_infinite() || value.is_nan() {
+                let value: f64 = (*value).into();
+                if value < 0.0 || value.is_infinite() || value.is_nan() {
                     0.0
                 } else {
-                    *value
+                    value
                 }
             })
             .collect();
@@ -122,6 +126,13 @@ impl Preferences {
                 .map(|p| Probability::new(p / total))
                 .collect(),
         })
+    }
+
+    /*
+     * Gets the Probability at index
+     */
+    pub fn get_preference(&self, index: usize) -> Probability {
+        self.preferences[index]
     }
 
     /*
