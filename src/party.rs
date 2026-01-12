@@ -30,4 +30,8 @@ impl Party {
     pub fn get_attractiveness(&self) -> f64 {
         self.attractiveness
     }
+
+    pub fn set_attractiveness(&mut self, value: f64) {
+        self.attractiveness = value;
+    }
 }

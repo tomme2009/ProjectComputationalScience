@@ -64,9 +64,9 @@ fn initialize_parties_with_preferences(
 
 fn main() {
     const NUM_PREFERENCES: usize = 1;
-    let mut network = WattsStrogatz::new(1000, 24, 0.7, NUM_PREFERENCES).unwrap();
+    let mut network = WattsStrogatz::new(1000, 24, 0.05, NUM_PREFERENCES).unwrap();
 
-    let parties = initialize_parties_with_preferences(
+    let mut parties = initialize_parties_with_preferences(
         5,
         &["Extreme-Left", "Left", "Middle", "Right", "Extreme-Right"],
         &[&[0.1], &[0.3], &[0.5], &[0.7], &[0.9]],
@@ -74,8 +74,12 @@ fn main() {
 
     network.initialize_previous_votes(&parties, Probability::new(0.05));
 
-    for _ in 0..5 {
+    for election_num in 0..100 {
         // let election_result = hold_election(network.get_agents_mut(), &parties, VotingSystem::FPTP);
+        if election_num == 5 {
+            parties[4].set_attractiveness(0.1);
+            println!("{} had their attractiveness lowered", parties[4].get_name());
+        }
         let election_result = network.hold_election(&parties, VotingSystem::FPTP);
         match election_result {
             ElectionResult::FPTP(winner, votes) => {
