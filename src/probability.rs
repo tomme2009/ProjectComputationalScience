@@ -61,7 +61,7 @@ impl Probability {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Preferences {
     preferences: Vec<Probability>,
 }
@@ -92,7 +92,7 @@ impl Preferences {
      */
     pub fn from_iter<I>(preferences: I) -> Preferences
     where
-        I: Iterator<Item = f64>
+        I: Iterator<Item = f64>,
     {
         // Convert the floats to Probabilities and return the Preferences
         Preferences {
@@ -101,19 +101,20 @@ impl Preferences {
     }
 
     /*
-     * Creates a new Preferences object where all probabilities sum up to 1.0
+     * Creates a new Preferences object where all probabilities sum up to 1.0,
+     * unless the given values sum to 0.
      * This function will turn each f64 into a Probability
      * see the Probability struct for the relevant conversion rules
      * This function will snap all negative floats, NaN, and infinite to 0.0
      */
-    pub fn new_normalize<T>(preferences: &[T]) -> Result<Preferences, String>
+    pub fn new_normalize<T>(preferences: &[T]) -> Preferences
     where
         T: Copy + Into<f64>,
     {
         if preferences.len() == 0 {
-            return Ok(Preferences {
+            return Preferences {
                 preferences: Vec::new(),
-            });
+            };
         }
 
         // Convert <0.0, NaN, and infinite values to 0.0
@@ -132,16 +133,21 @@ impl Preferences {
         // Calculate the sum for normalizing
         let total: f64 = preferences.iter().sum();
         if total == 0.0 {
-            return Err(String::from("Values cannot sum to 0"));
+            return Preferences {
+                preferences: preferences
+                    .iter()
+                    .map(|value| Probability::new(*value))
+                    .collect(),
+            };
         }
 
         // Convert the floats to Probabilities, normalize, and return the Preferences
-        Ok(Preferences {
+        Preferences {
             preferences: preferences
                 .iter()
                 .map(|p| Probability::new(p / total))
                 .collect(),
-        })
+        }
     }
 
     /*
@@ -200,14 +206,21 @@ impl Preferences {
         // If no preference was returned, returned the last index
         self.preferences.len() - 1
     }
+
+    pub fn len(&self) -> usize {
+        self.preferences.len()
+    }
 }
 
 impl Mul for Preferences {
     type Output = Self;
 
     fn mul(self, rhs: Self) -> Self::Output {
-        Preferences::from_iter(self.preferences.iter().enumerate().map(|(i, lhs)| {
-            lhs.value * rhs.preferences[i].value
-        }))
+        Preferences::from_iter(
+            self.preferences
+                .iter()
+                .enumerate()
+                .map(|(i, lhs)| lhs.value * rhs.preferences[i].value),
+        )
     }
 }
