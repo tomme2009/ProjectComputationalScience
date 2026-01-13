@@ -32,7 +32,7 @@ pub trait Network {
                 agent.set_last_vote(
                     agent
                         .get_party_preferences_distance(parties)
-                        .get_vote(Probability::new(rand::random_range(0.0..1.0))),
+                        .choose(),
                 );
             }
         }

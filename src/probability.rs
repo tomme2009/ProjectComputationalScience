@@ -2,6 +2,7 @@ use std::fmt::Debug;
 use std::fmt::Display;
 use std::fmt::Error;
 use std::fmt::Formatter;
+use std::ops::Mul;
 
 /*
  * Custom probability type
@@ -85,6 +86,21 @@ impl Preferences {
     }
 
     /*
+     * Creates a new Preferences object from an iterator
+     * This function will turn each f64 into a Probability
+     * see the Probability struct for the relevant conversion rules
+     */
+    pub fn from_iter<I>(preferences: I) -> Preferences
+    where
+        I: Iterator<Item = f64>
+    {
+        // Convert the floats to Probabilities and return the Preferences
+        Preferences {
+            preferences: preferences.map(|p| Probability::new(p)).collect(),
+        }
+    }
+
+    /*
      * Creates a new Preferences object where all probabilities sum up to 1.0
      * This function will turn each f64 into a Probability
      * see the Probability struct for the relevant conversion rules
@@ -160,23 +176,38 @@ impl Preferences {
     }
 
     /*
-     * Get the index representing the given number n
-     * If preferences is a list [0.1, 0.3, 0.6], and n=0.2,
-     * then we first check if n = 0.2 < 0.1, if so we return index 0,
-     * otherwise if n = 0.2 < 0.1 + 0.3 = 0.4, then we return index 1, etc.
+     * Return a random number in [0, length(self) - 1]
+     * taking the preferences as a weighted list of probabilities
+     * If preferences is a list [0.1, 0.3, 0.6],
+     * then 0 will be returned with probability 0.1,
+     * 1 with probability 0.3, and 2 with probability 0.6
      */
-    pub fn get_vote(&self, n: Probability) -> usize {
-        let mut total = 0.0;
-        let n = n.get_value();
+    pub fn choose(&self) -> usize {
+        let total: f64 = self
+            .preferences
+            .iter()
+            .fold(0.0, |acc, probability| acc + probability.get_value());
+        let n = rand::random_range(0.0..=total);
 
+        let mut partial_sum = 0.0;
         for (i, preference) in self.preferences.iter().enumerate() {
-            total += preference.get_value();
-            if n <= total {
+            partial_sum += preference.get_value();
+            if n <= partial_sum {
                 return i;
             }
         }
 
         // If no preference was returned, returned the last index
         self.preferences.len() - 1
+    }
+}
+
+impl Mul for Preferences {
+    type Output = Self;
+
+    fn mul(self, rhs: Self) -> Self::Output {
+        Preferences::from_iter(self.preferences.iter().enumerate().map(|(i, lhs)| {
+            lhs.value * rhs.preferences[i].value
+        }))
     }
 }

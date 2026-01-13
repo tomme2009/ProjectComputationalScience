@@ -117,12 +117,15 @@ impl Agent {
      * and the agent's neighbors' support for the those parties
      */
     pub fn vote(&mut self, parties: &[Party], neighbor_support: Preferences) -> usize {
-        let party_preferences = self.get_party_preferences(parties, neighbor_support);
+        let party_scores = self.get_party_preferences(parties, neighbor_support);
+        let party_distances = self.get_party_preferences_distance(parties);
+
+        let party_preferences = party_distances * party_scores;
 
         // Change vote with chance 1-loyalty
         if rand::random_range(0.0..1.0) > self.loyalty.get_value() || self.last_vote.is_none() {
             // Change vote
-            let vote = party_preferences.get_vote(Probability::new(rand::random_range(0.0..1.0)));
+            let vote = party_preferences.choose();
             self.last_vote = Some(vote);
             vote
         } else {
