@@ -8,3 +8,5 @@ read.py
 .vscode/
 *.swp
 *.swo
+
+.ipynb_checkpoints
