@@ -19,7 +19,8 @@ struct Relationship {
 pub struct Agent {
     friends: HashMap<usize, Relationship>, // List of agents this agent has a two-way relationship with
     preferences: Preferences,              // List of standpoints of the agent
-    last_vote: Option<usize>,              // Last party this agent voted for
+    last_vote: Option<usize>,              // Party this agent voted for in the previous election
+    current_vote: Option<usize>,           // Party this agent for in the current election
     loyalty: Probability,                  // Loyalty of this agent to its last vote
     susceptibility: Probability,           // Susceptitibility of this agent to peer pressure
 }
@@ -50,6 +51,7 @@ impl Agent {
             friends,
             preferences,
             last_vote: None,
+            current_vote: None,
             loyalty,
             susceptibility,
         }
@@ -123,10 +125,11 @@ impl Agent {
         if rand::random_range(0.0..1.0) > self.loyalty.get_value() || self.last_vote.is_none() {
             // Change vote
             let vote = party_preferences.get_vote(Probability::new(rand::random_range(0.0..1.0)));
-            self.last_vote = Some(vote);
+            self.current_vote = Some(vote);
             vote
         } else {
             // Don't change vote
+            self.current_vote = self.last_vote;
             self.last_vote.unwrap()
         }
     }
@@ -137,5 +140,9 @@ impl Agent {
 
     pub fn set_last_vote(&mut self, vote: usize) {
         self.last_vote = Some(vote);
+    }
+
+    pub fn update_last_vote(&mut self) {
+        self.last_vote = self.current_vote;
     }
 }

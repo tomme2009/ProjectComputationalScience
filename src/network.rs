@@ -77,6 +77,10 @@ pub trait Network {
                     .map(|(index, _)| index)
                     .unwrap();
 
+                for agent in agents {
+                    agent.update_last_vote();
+                }
+
                 ElectionResult::FPTP(winner, votes)
             }
         }
