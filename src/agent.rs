@@ -1,4 +1,4 @@
-use crate::party::Party;
+use crate::party::Parties;
 use crate::probability::{Preferences, Probability};
 use rand::distr::Distribution;
 use rand_distr::Normal;
@@ -9,7 +9,7 @@ use std::collections::HashMap;
  */
 #[derive(Debug)]
 struct Relationship {
-    strength: Probability, // Strength of the relationship
+    _strength: Probability, // Strength of the relationship
 }
 
 /*
@@ -19,8 +19,8 @@ struct Relationship {
 pub struct Agent {
     friends: HashMap<usize, Relationship>, // List of agents this agent has a two-way relationship with
     preferences: Preferences,              // List of standpoints of the agent
-    last_vote: Option<usize>,              // Party this agent voted for in the previous election
-    current_vote: Option<usize>,           // Party this agent for in the current election
+    last_vote: Option<usize>,              // Last party this agent voted for
+    current_vote: Option<usize>,           // Party this agent votes for in this election
     loyalty: Probability,                  // Loyalty of this agent to its last vote
     susceptibility: Probability,           // Susceptitibility of this agent to peer pressure
 }
@@ -34,7 +34,7 @@ impl Agent {
                 (
                     *agent,
                     Relationship {
-                        strength: Probability::new(*strength),
+                        _strength: Probability::new(*strength),
                     },
                 )
             })
@@ -73,17 +73,22 @@ impl Agent {
      * Function requires that the Preferences of the agent and all the parties
      * have the same dimension
      */
-    pub fn get_party_preferences_distance(&self, parties: &[Party]) -> Preferences {
+    pub fn get_party_preferences_distance(
+        &self,
+        parties: &Parties,
+        party_order: &[usize],
+    ) -> Preferences {
         const DISTANCE_MULTIPLIER: f64 = -10.0;
-        let party_preferences = parties
+        let party_preferences = party_order
             .iter()
-            .map(|party| {
+            .map(|party_index| {
+                let party = parties.get_party(*party_index).unwrap();
                 (DISTANCE_MULTIPLIER * self.preferences.distance(party.get_preferences()).unwrap())
                     .exp()
             })
             .collect::<Vec<f64>>();
 
-        Preferences::new_normalize(&party_preferences).unwrap()
+        Preferences::new_normalize(&party_preferences)
     }
 
     /*
@@ -94,15 +99,17 @@ impl Agent {
      */
     fn get_party_preferences(
         &self,
-        parties: &[Party],
+        parties: &Parties,
+        party_order: &[usize],
         neighbor_support: Preferences,
     ) -> Preferences {
         const PEER_PRESSURE: f64 = 0.3;
         const EXTERNAL_EVENTS: f64 = 0.5;
-        let party_preferences = parties
+        let party_preferences = party_order
             .iter()
             .enumerate()
-            .map(|(i, party)| {
+            .map(|(i, party_index)| {
+                let party = parties.get_party(*party_index).unwrap();
                 (PEER_PRESSURE
                     * self.susceptibility.get_value()
                     * neighbor_support.get_preference(i).get_value()
@@ -111,20 +118,33 @@ impl Agent {
             })
             .collect::<Vec<f64>>();
 
-        Preferences::new_normalize(&party_preferences).unwrap()
+        Preferences::new_normalize(&party_preferences)
     }
 
     /*
      * Get this agent's vote given a list of parties
      * and the agent's neighbors' support for the those parties
      */
-    pub fn vote(&mut self, parties: &[Party], neighbor_support: Preferences) -> usize {
-        let party_preferences = self.get_party_preferences(parties, neighbor_support);
+    pub fn vote(
+        &mut self,
+        parties: &Parties,
+        party_order: &[usize],
+        neighbor_support: Preferences,
+    ) -> usize {
+        let party_scores = self.get_party_preferences(parties, party_order, neighbor_support);
+        let party_distances = self.get_party_preferences_distance(parties, party_order);
+
+        let party_preferences = party_distances * party_scores;
 
         // Change vote with chance 1-loyalty
-        if rand::random_range(0.0..1.0) > self.loyalty.get_value() || self.last_vote.is_none() {
+        if rand::random_range(0.0..1.0) > self.loyalty.get_value()
+            || self
+                .last_vote
+                .is_none_or(|vote| !party_order.contains(&vote))
+        {
             // Change vote
-            let vote = party_preferences.get_vote(Probability::new(rand::random_range(0.0..1.0)));
+            let vote_index = party_preferences.choose();
+            let vote = party_order[vote_index];
             self.current_vote = Some(vote);
             vote
         } else {
@@ -144,5 +164,13 @@ impl Agent {
 
     pub fn update_last_vote(&mut self) {
         self.last_vote = self.current_vote;
+    }
+
+    pub fn unset_last_vote(&mut self) {
+        self.last_vote = None;
+    }
+
+    pub fn get_current_vote(&self) -> Option<usize> {
+        self.current_vote
     }
 }
